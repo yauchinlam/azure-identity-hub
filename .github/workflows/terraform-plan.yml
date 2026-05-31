@@ -35,6 +35,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate hub secrets
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          AZURE_LOCATION: ${{ secrets.AZURE_LOCATION }}
+          TF_VAR_github_owner: ${{ secrets.TF_VAR_github_owner }}
+          HUB_SETTINGS_TFVARS: ${{ secrets.HUB_SETTINGS_TFVARS }}
+          REPO_SECRET_SYNC_TOKEN: ${{ secrets.REPO_SECRET_SYNC_TOKEN }}
+        run: bash ../../scripts/validate-hub-secrets.sh github_repos.tfvars.json
+
       - name: Azure login (OIDC)
         uses: azure/login@v2
         with:

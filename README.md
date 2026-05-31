@@ -151,19 +151,39 @@ terraform init -migrate-state
 
 ### Step 4 — Configure GitHub secrets on **this hub repo**
 
-| Secret | Source |
-|--------|--------|
-| `AZURE_CLIENT_ID` | `terraform output -raw hub_identity_client_id` |
-| `AZURE_TENANT_ID` | `terraform output -raw tenant_id` |
-| `AZURE_SUBSCRIPTION_ID` | `az account show --query id -o tsv` |
-| `AZURE_LOCATION` | Same as `location` in `terraform.tfvars` |
-| `TF_VAR_github_owner` | Same as `github_owner` in `terraform.tfvars` |
-| `REPO_SECRET_SYNC_TOKEN` | Fine-grained PAT with **Secrets** write on target repos (optional but recommended) |
-| `HUB_SETTINGS_TFVARS` | Full contents of your `hub_settings.tfvars.json` (one-line JSON is fine) |
+#### Hub repo secrets (required for CI)
+
+| Secret | Required | Source |
+|--------|----------|--------|
+| `AZURE_CLIENT_ID` | Yes | `terraform output -raw hub_identity_client_id` |
+| `AZURE_TENANT_ID` | Yes | `terraform output -raw tenant_id` |
+| `AZURE_SUBSCRIPTION_ID` | Yes | `az account show --query id -o tsv` |
+| `AZURE_LOCATION` | Yes | Same as `location` in `terraform.tfvars` |
+| `TF_VAR_github_owner` | Yes | Same as `github_owner` in `terraform.tfvars` |
+| `HUB_SETTINGS_TFVARS` | Yes | Full contents of your `hub_settings.tfvars.json` (one-line JSON is fine) |
+| `REPO_SECRET_SYNC_TOKEN` | Yes when `sync_github_secret` is true | Fine-grained PAT with **Secrets** write on vended repos |
+
+`sync_github_secret` defaults to **`true`** in `github_repos.tfvars.json`. When any registered repo has sync enabled (including the default), CI **requires** `REPO_SECRET_SYNC_TOKEN` and fails early if it is missing.
 
 ```bash
-gh secret set AZURE_CLIENT_ID --body "<hub_identity_client_id>" --repo <owner>/azure-identity-hub
-# ... repeat for other secrets
+gh secret set REPO_SECRET_SYNC_TOKEN --body "<fine-grained-pat>" --repo yauchinlam/azure-identity-hub
+```
+
+#### Secrets synced to each vended repo (when `sync_github_secret: true`)
+
+After apply on `main`, CI pushes these to `https://github.com/{owner}/{repo-name}`:
+
+| Secret | Source |
+|--------|--------|
+| `AZURE_CLIENT_ID` | Vended deploy identity client ID |
+| `AZURE_TENANT_ID` | Hub `tenant_id` output |
+| `AZURE_SUBSCRIPTION_ID` | Hub `subscription_id` output |
+| `AZURE_LOCATION` | Hub `AZURE_LOCATION` secret |
+| `TF_VAR_github_owner` | Hub `TF_VAR_github_owner` secret |
+
+```bash
+gh secret set AZURE_CLIENT_ID --body "<hub_identity_client_id>" --repo yauchinlam/azure-identity-hub
+# ... repeat for other hub secrets
 ```
 
 ### Step 5 — Push to main
