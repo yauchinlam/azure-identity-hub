@@ -170,6 +170,10 @@ gh secret set AZURE_CLIENT_ID --body "<hub_identity_client_id>" --repo <owner>/a
 
 Hub CI runs `terraform plan`, `terraform apply`, then `scripts/sync-repo-secrets.sh` to push client IDs to registered repos.
 
+## Branch protection
+
+`main` requires a pull request before merge. Direct pushes to `main` are blocked. Feature branches run **Terraform (plan)** on the PR; **Terraform (apply)** runs after merge.
+
 ## Adding a new repo (pull request workflow)
 
 `main` is branch-protected. Register repos via a feature branch and pull request:
