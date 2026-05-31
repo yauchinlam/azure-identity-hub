@@ -161,13 +161,27 @@ terraform init -migrate-state
 | `AZURE_LOCATION` | Yes | Same as `location` in `terraform.tfvars` |
 | `TF_VAR_github_owner` | Yes | Same as `github_owner` in `terraform.tfvars` |
 | `HUB_SETTINGS_TFVARS` | Yes | Full contents of your `hub_settings.tfvars.json` (one-line JSON is fine) |
-| `REPO_SECRET_SYNC_TOKEN` | Yes when `sync_github_secret` is true | Fine-grained PAT with **Secrets** write on vended repos |
+| `REPO_SECRET_SYNC_TOKEN` | Yes when vended repos use secret sync | A **Personal Access Token (PAT)** — see below |
 
-`sync_github_secret` defaults to **`true`** in `github_repos.tfvars.json`. When any registered repo has sync enabled (including the default), CI **requires** `REPO_SECRET_SYNC_TOKEN` and fails early if it is missing.
+#### `REPO_SECRET_SYNC_TOKEN` — PAT for cross-repo secret sync
+
+`REPO_SECRET_SYNC_TOKEN` is **not** a Terraform flag. It is a GitHub Actions **secret on this hub repo** whose value is a **Personal Access Token (PAT)**. CI passes it to `gh secret set` so `scripts/sync-repo-secrets.sh` can push Azure credentials into each vended repo after apply.
+
+**Create a fine-grained PAT** (GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens):
+
+| Setting | Value |
+|---------|--------|
+| Resource owner | Your user or org (`yauchinlam`) |
+| Repository access | Only select repositories — add each vended repo (e.g. `portfolio-website`) |
+| Permissions → Secrets | **Read and write** |
+
+**Store the PAT on the hub repo** (never commit it):
 
 ```bash
-gh secret set REPO_SECRET_SYNC_TOKEN --body "<fine-grained-pat>" --repo yauchinlam/azure-identity-hub
+gh secret set REPO_SECRET_SYNC_TOKEN --body "<paste-pat-here>" --repo yauchinlam/azure-identity-hub
 ```
+
+When any entry in `github_repos.tfvars.json` has `sync_github_secret: true` (the default), apply on `main` requires this secret. Without it, CI warns on PRs and fails on apply.
 
 #### Secrets synced to each vended repo (when `sync_github_secret: true`)
 
