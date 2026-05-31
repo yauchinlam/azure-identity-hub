@@ -1,0 +1,16 @@
+# Copy to backend.tf after the first local-state apply.
+# Uses the shared tfstate storage account with a unique key per repo:
+#   <github-repo-name>/<env>.tfstate
+#
+#   terraform init -migrate-state
+#
+# terraform {
+#   backend "azurerm" {
+#     resource_group_name  = "rg-<bootstrap-repo-name>-<env>"
+#     storage_account_name = "<shared tfstate storage account name>"
+#     container_name       = "tfstate"
+#     key                  = "<github-repo-name>/<env>.tfstate"
+#     use_azuread_auth     = true
+#     use_oidc             = true
+#   }
+# }

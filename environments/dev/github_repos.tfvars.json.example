@@ -1,0 +1,9 @@
+{
+  "github_repos": {
+    "react-ai-hello-world": {
+      "create_resource_group": true,
+      "branch": "main",
+      "sync_github_secret": true
+    }
+  }
+}

@@ -1,0 +1,97 @@
+# Terraform for environments/dev — hub bootstrap + identity vending.
+#
+# Prerequisites (complete local bootstrap first; see README.md):
+#   1. terraform-infrastructure shared tfstate storage account exists.
+#   2. Local apply created the hub resource group and deploy identity.
+#   3. State migrated to shared storage (key: azure-identity-hub/dev.tfstate).
+#   4. GitHub repository secrets are configured on this hub repo.
+#
+# Trigger: push to main — plan, apply, then sync AZURE_CLIENT_ID to vended repos.
+
+name: Terraform
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: terraform-dev
+  cancel-in-progress: false
+
+jobs:
+  terraform:
+    name: Terraform (plan + apply + sync secrets)
+    runs-on: ubuntu-latest
+    env:
+      TF_IN_AUTOMATION: true
+      TF_VAR_location: ${{ secrets.AZURE_LOCATION }}
+      TF_VAR_github_owner: ${{ secrets.TF_VAR_github_owner }}
+      ARM_USE_OIDC: true
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_LOCATION: ${{ secrets.AZURE_LOCATION }}
+      GITHUB_OWNER: ${{ secrets.TF_VAR_github_owner }}
+      REPO_SECRET_SYNC_TOKEN: ${{ secrets.REPO_SECRET_SYNC_TOKEN }}
+    defaults:
+      run:
+        working-directory: environments/dev
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.15.5
+
+      - name: Write private Terraform config
+        env:
+          HUB_SETTINGS_TFVARS: ${{ secrets.HUB_SETTINGS_TFVARS }}
+          TFSTATE_RESOURCE_GROUP_NAME: ${{ secrets.TFSTATE_RESOURCE_GROUP_NAME }}
+          TFSTATE_STORAGE_ACCOUNT_NAME: ${{ secrets.TFSTATE_STORAGE_ACCOUNT_NAME }}
+          TFSTATE_BACKEND_KEY: ${{ secrets.TFSTATE_BACKEND_KEY }}
+        run: |
+          if [ -z "$HUB_SETTINGS_TFVARS" ] || [ -z "$TFSTATE_RESOURCE_GROUP_NAME" ] || [ -z "$TFSTATE_STORAGE_ACCOUNT_NAME" ] || [ -z "$TFSTATE_BACKEND_KEY" ]; then
+            echo "Missing HUB_SETTINGS_TFVARS, TFSTATE_RESOURCE_GROUP_NAME, TFSTATE_STORAGE_ACCOUNT_NAME, or TFSTATE_BACKEND_KEY secrets."
+            exit 1
+          fi
+          printf '%s\n' "$HUB_SETTINGS_TFVARS" > hub_settings.tfvars.json
+          printf '%s\n' \
+            'terraform {' \
+            '  backend "azurerm" {' \
+            "    resource_group_name  = \"${TFSTATE_RESOURCE_GROUP_NAME}\"" \
+            "    storage_account_name = \"${TFSTATE_STORAGE_ACCOUNT_NAME}\"" \
+            '    container_name       = "tfstate"' \
+            "    key                  = \"${TFSTATE_BACKEND_KEY}\"" \
+            '    use_azuread_auth     = true' \
+            '    use_oidc             = true' \
+            '  }' \
+            '}' \
+            > backend.tf
+
+      - name: Terraform init
+        run: terraform init
+
+      - name: Terraform plan
+        run: terraform plan -var-file=hub_settings.tfvars.json -var-file=github_repos.tfvars.json -out=tfplan -no-color
+
+      - name: Terraform apply
+        run: terraform apply -auto-approve tfplan
+
+      - name: Sync vended repo secrets
+        if: env.REPO_SECRET_SYNC_TOKEN != ''
+        run: bash ../../scripts/sync-repo-secrets.sh

@@ -1,0 +1,7 @@
+{
+  "shared_tfstate": {
+    "resource_group_name": "rg-<bootstrap-repo-name>-<env>",
+    "storage_account_name": "<from bootstrap output tfstate_storage_account_name>",
+    "container_name": "tfstate"
+  }
+}
