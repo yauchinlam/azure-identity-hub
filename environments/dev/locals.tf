@@ -7,6 +7,7 @@ locals {
   terraform_backend_state_key = "${var.github_repo_name}/${var.environment}.tfstate"
 
   github_oidc_subject_main = "repo:${var.github_owner}/${var.github_repo_name}:ref:refs/heads/main"
+  github_oidc_subject_pull_request = "repo:${var.github_owner}/${var.github_repo_name}:pull_request"
 
   tags = merge(
     var.tags,

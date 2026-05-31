@@ -170,14 +170,17 @@ gh secret set AZURE_CLIENT_ID --body "<hub_identity_client_id>" --repo <owner>/a
 
 Hub CI runs `terraform plan`, `terraform apply`, then `scripts/sync-repo-secrets.sh` to push client IDs to registered repos.
 
-## Adding a new repo (no local apply)
+## Adding a new repo (pull request workflow)
 
-1. Edit **`environments/dev/github_repos.tfvars.json`** (this file is **committed** so CI sees the roster):
+`main` is branch-protected. Register repos via a feature branch and pull request:
+
+1. Create a branch, e.g. `git checkout -b add/portfolio-website`
+2. Edit **`environments/dev/github_repos.tfvars.json`**:
 
 ```json
 {
   "github_repos": {
-    "react-ai-hello-world": {
+    "portfolio-website": {
       "create_resource_group": true,
       "branch": "main",
       "sync_github_secret": true
@@ -186,11 +189,8 @@ Hub CI runs `terraform plan`, `terraform apply`, then `scripts/sync-repo-secrets
 }
 ```
 
-2. Commit and push to **`main`** on `azure-identity-hub`.
-3. CI creates the identity, federated credential, resource group, and RBAC.
-4. CI sets on `owner/react-ai-hello-world`:
-   - `AZURE_CLIENT_ID` (vended identity)
-   - `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `AZURE_LOCATION`, `TF_VAR_github_owner`
+3. Open a pull request to **`main`**. CI runs **`Terraform (plan)`** on the PR.
+4. Merge the PR. CI on **`main`** applies the change and syncs secrets to the target repo.
 
 The target repo's first Terraform apply can run entirely in **its own CI**—point `backend.tf` at the shared storage account with key `{repo-name}/dev.tfstate`.
 
