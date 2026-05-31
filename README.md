@@ -176,10 +176,28 @@ Hub CI runs `terraform plan`, `terraform apply`, then `scripts/sync-repo-secrets
 
 ## Adding a new repo (pull request workflow)
 
-`main` is branch-protected. Register repos via a feature branch and pull request:
+`main` is branch-protected. Register repos via a feature branch and pull request.
 
-1. Create a branch, e.g. `git checkout -b add/portfolio-website`
-2. Edit **`environments/dev/github_repos.tfvars.json`**:
+### Branch naming
+
+Use **`feature/{repo-name}`**, where `{repo-name}` matches the GitHub repository name (the map key in `github_repos.tfvars.json`):
+
+```text
+feature/portfolio-website
+feature/react-ai-hello-world
+```
+
+### Steps
+
+1. Create a branch from `main`:
+
+```bash
+git checkout main
+git pull
+git checkout -b feature/portfolio-website
+```
+
+2. Edit **`environments/dev/github_repos.tfvars.json`** and add the repo. The map key must match the GitHub repo name:
 
 ```json
 {
@@ -193,7 +211,7 @@ Hub CI runs `terraform plan`, `terraform apply`, then `scripts/sync-repo-secrets
 }
 ```
 
-3. Open a pull request to **`main`**. CI runs **`Terraform (plan)`** on the PR.
+3. Open a pull request to **`main`**. Include the target repo URL in the PR description, e.g. https://github.com/yauchinlam/portfolio-website. CI runs **`Terraform (plan)`** on the PR.
 4. Merge the PR. CI on **`main`** applies the change and syncs secrets to the target repo.
 
 The target repo's first Terraform apply can run entirely in **its own CI**—point `backend.tf` at the shared storage account with key `{repo-name}/dev.tfstate`.
