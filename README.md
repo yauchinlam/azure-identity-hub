@@ -142,14 +142,12 @@ az storage blob list --account-name stterraforminfrastructur --container-name tf
 
 ### Step 3 — Migrate state to shared storage
 
-```bash
-cp backend.tf.example backend.tf
-# Point at shared storage from terraform-infrastructure; key = azure-identity-hub/dev.tfstate
-
+```powershell
+Rename-Item backend.tf.hold backend.tf
 terraform init -migrate-state
 ```
 
-`backend.tf`, `terraform.tfvars`, and `hub_settings.tfvars.json` stay **gitignored** — do not commit them.
+`terraform.tfvars` and `hub_settings.tfvars.json` stay **gitignored** — do not commit them.
 
 ### Step 4 — Configure GitHub secrets on **this hub repo**
 
