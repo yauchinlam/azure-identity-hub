@@ -211,7 +211,16 @@ git checkout -b feature/portfolio-website
 }
 ```
 
-3. Open a pull request to **`main`**. Include the target repo URL in the PR description, e.g. https://github.com/yauchinlam/portfolio-website. CI runs **`Terraform (plan)`** on the PR.
+3. Open a pull request to **`main`**. In the PR description include:
+
+   - Target repo URL (e.g. https://github.com/yauchinlam/portfolio-website)
+   - **Environment:** `dev` (this stack’s `environment` variable in `environments/dev/`)
+   - Dev-scoped resources being vended, for example:
+     - Resource group: `rg-portfolio-website-dev`
+     - Deploy identity: `id-portfolio-website-dev-deploy`
+     - Remote state key: `portfolio-website/dev.tfstate`
+
+   CI runs **`Terraform (plan)`** on the PR.
 4. Merge the PR. CI on **`main`** applies the change and syncs secrets to the target repo.
 
 The target repo's first Terraform apply can run entirely in **its own CI**—point `backend.tf` at the shared storage account with key `{repo-name}/dev.tfstate`.
