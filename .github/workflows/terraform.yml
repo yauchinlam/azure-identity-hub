@@ -59,30 +59,15 @@ jobs:
         with:
           terraform_version: 1.15.5
 
-      - name: Write private Terraform config
+      - name: Write hub settings
         env:
           HUB_SETTINGS_TFVARS: ${{ secrets.HUB_SETTINGS_TFVARS }}
-          TFSTATE_RESOURCE_GROUP_NAME: ${{ secrets.TFSTATE_RESOURCE_GROUP_NAME }}
-          TFSTATE_STORAGE_ACCOUNT_NAME: ${{ secrets.TFSTATE_STORAGE_ACCOUNT_NAME }}
-          TFSTATE_BACKEND_KEY: ${{ secrets.TFSTATE_BACKEND_KEY }}
         run: |
-          if [ -z "$HUB_SETTINGS_TFVARS" ] || [ -z "$TFSTATE_RESOURCE_GROUP_NAME" ] || [ -z "$TFSTATE_STORAGE_ACCOUNT_NAME" ] || [ -z "$TFSTATE_BACKEND_KEY" ]; then
-            echo "Missing HUB_SETTINGS_TFVARS, TFSTATE_RESOURCE_GROUP_NAME, TFSTATE_STORAGE_ACCOUNT_NAME, or TFSTATE_BACKEND_KEY secrets."
+          if [ -z "$HUB_SETTINGS_TFVARS" ]; then
+            echo "Missing HUB_SETTINGS_TFVARS secret."
             exit 1
           fi
           printf '%s\n' "$HUB_SETTINGS_TFVARS" > hub_settings.tfvars.json
-          printf '%s\n' \
-            'terraform {' \
-            '  backend "azurerm" {' \
-            "    resource_group_name  = \"${TFSTATE_RESOURCE_GROUP_NAME}\"" \
-            "    storage_account_name = \"${TFSTATE_STORAGE_ACCOUNT_NAME}\"" \
-            '    container_name       = "tfstate"' \
-            "    key                  = \"${TFSTATE_BACKEND_KEY}\"" \
-            '    use_azuread_auth     = true' \
-            '    use_oidc             = true' \
-            '  }' \
-            '}' \
-            > backend.tf
 
       - name: Terraform init
         run: terraform init

@@ -72,7 +72,8 @@ For each entry in `github_repos`, this stack creates:
 │   ├── hub-oidc.tf / hub-rbac.tf     # This repo's own CI identity
 │   ├── identities.tf                 # for_each over github_repos
 │   ├── variables.tf / locals.tf / data.tf / outputs.tf
-│   ├── backend.tf.example            # Template (copy to gitignored backend.tf)
+│   ├── backend.tf                    # Committed shared storage backend config
+│   ├── backend.tf.example            # Generic template
 │   ├── terraform.tfvars.example      # Template (copy to gitignored terraform.tfvars)
 │   ├── hub_settings.tfvars.json.example
 │   ├── github_repos.tfvars.json      # Committed repo roster (CI reads this)
@@ -86,7 +87,7 @@ For each entry in `github_repos`, this stack creates:
 | `terraform.tfvars.example` | Yes | Generic template |
 | `terraform.tfvars` | **No** (gitignored) | Your `github_owner`, `location`, etc. |
 | `backend.tf.example` | Yes | Generic template |
-| `backend.tf` | **No** (gitignored) | Shared storage backend; key `{repo-name}/{env}.tfstate` |
+| `backend.tf` | Yes | Shared storage backend; key `{repo-name}/{env}.tfstate` |
 | `hub_settings.tfvars.json.example` | Yes | Generic template |
 | `hub_settings.tfvars.json` | **No** (gitignored) | Shared tfstate storage reference |
 | `github_repos.tfvars.json` | Yes | Repo roster for identity vending |
@@ -113,8 +114,8 @@ cp hub_settings.tfvars.json.example hub_settings.tfvars.json
 az login
 az account set --subscription "<subscription-id>"
 
-# Step 1 uses local state — move backend.tf aside if it already exists
-if [ -f backend.tf ]; then mv backend.tf backend.tf.hold; fi
+# Step 1 uses local state — temporarily rename backend.tf so init does not use the remote backend
+if (Test-Path backend.tf) { Rename-Item backend.tf backend.tf.hold }
 
 terraform init
 terraform plan -var-file=hub_settings.tfvars.json
@@ -161,9 +162,6 @@ terraform init -migrate-state
 | `TF_VAR_github_owner` | Same as `github_owner` in `terraform.tfvars` |
 | `REPO_SECRET_SYNC_TOKEN` | Fine-grained PAT with **Secrets** write on target repos (optional but recommended) |
 | `HUB_SETTINGS_TFVARS` | Full contents of your `hub_settings.tfvars.json` (one-line JSON is fine) |
-| `TFSTATE_RESOURCE_GROUP_NAME` | Shared state RG (e.g. `rg-terraform-infrastructure-dev`) |
-| `TFSTATE_STORAGE_ACCOUNT_NAME` | Shared state storage account name |
-| `TFSTATE_BACKEND_KEY` | This repo's state key (e.g. `azure-identity-hub/dev.tfstate`) |
 
 ```bash
 gh secret set AZURE_CLIENT_ID --body "<hub_identity_client_id>" --repo <owner>/azure-identity-hub
