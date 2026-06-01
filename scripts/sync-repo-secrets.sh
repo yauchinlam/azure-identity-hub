@@ -2,8 +2,8 @@
 set -euo pipefail
 
 # Sync vended deploy identity client IDs to target GitHub repository secrets.
-# Requires: gh CLI, jq, terraform output, and REPO_SECRET_SYNC_TOKEN (PAT with
-# repo scope or fine-grained admin on target repos).
+# Requires: gh CLI, jq, terraform output, and REPO_SECRET_SYNC_TOKEN — a PAT stored
+# as a GitHub Actions secret on this hub repo (Secrets read/write on vended repos).
 
 : "${GITHUB_OWNER:?Set GITHUB_OWNER to your GitHub user or org}"
 : "${REPO_SECRET_SYNC_TOKEN:?Set REPO_SECRET_SYNC_TOKEN to a PAT that can write secrets}"

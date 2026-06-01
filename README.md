@@ -151,19 +151,53 @@ terraform init -migrate-state
 
 ### Step 4 — Configure GitHub secrets on **this hub repo**
 
-| Secret | Source |
-|--------|--------|
-| `AZURE_CLIENT_ID` | `terraform output -raw hub_identity_client_id` |
-| `AZURE_TENANT_ID` | `terraform output -raw tenant_id` |
-| `AZURE_SUBSCRIPTION_ID` | `az account show --query id -o tsv` |
-| `AZURE_LOCATION` | Same as `location` in `terraform.tfvars` |
-| `TF_VAR_github_owner` | Same as `github_owner` in `terraform.tfvars` |
-| `REPO_SECRET_SYNC_TOKEN` | Fine-grained PAT with **Secrets** write on target repos (optional but recommended) |
-| `HUB_SETTINGS_TFVARS` | Full contents of your `hub_settings.tfvars.json` (one-line JSON is fine) |
+#### Hub repo secrets (required for CI)
+
+| Secret | Required | Source |
+|--------|----------|--------|
+| `AZURE_CLIENT_ID` | Yes | `terraform output -raw hub_identity_client_id` |
+| `AZURE_TENANT_ID` | Yes | `terraform output -raw tenant_id` |
+| `AZURE_SUBSCRIPTION_ID` | Yes | `az account show --query id -o tsv` |
+| `AZURE_LOCATION` | Yes | Same as `location` in `terraform.tfvars` |
+| `TF_VAR_github_owner` | Yes | Same as `github_owner` in `terraform.tfvars` |
+| `HUB_SETTINGS_TFVARS` | Yes | Full contents of your `hub_settings.tfvars.json` (one-line JSON is fine) |
+| `REPO_SECRET_SYNC_TOKEN` | Yes when vended repos use secret sync | A **Personal Access Token (PAT)** — see below |
+
+#### `REPO_SECRET_SYNC_TOKEN` — PAT for cross-repo secret sync
+
+`REPO_SECRET_SYNC_TOKEN` is **not** a Terraform flag. It is a GitHub Actions **secret on this hub repo** whose value is a **Personal Access Token (PAT)**. CI passes it to `gh secret set` so `scripts/sync-repo-secrets.sh` can push Azure credentials into each vended repo after apply.
+
+**Create a fine-grained PAT** (GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens):
+
+| Setting | Value |
+|---------|--------|
+| Resource owner | Your user or org (`yauchinlam`) |
+| Repository access | Only select repositories — add each vended repo (e.g. `portfolio-website`) |
+| Permissions → Secrets | **Read and write** |
+
+**Store the PAT on the hub repo** (never commit it):
 
 ```bash
-gh secret set AZURE_CLIENT_ID --body "<hub_identity_client_id>" --repo <owner>/azure-identity-hub
-# ... repeat for other secrets
+gh secret set REPO_SECRET_SYNC_TOKEN --body "<paste-pat-here>" --repo yauchinlam/azure-identity-hub
+```
+
+When any entry in `github_repos.tfvars.json` has `sync_github_secret: true` (the default), apply on `main` requires this secret. Without it, CI warns on PRs and fails on apply.
+
+#### Secrets synced to each vended repo (when `sync_github_secret: true`)
+
+After apply on `main`, CI pushes these to `https://github.com/{owner}/{repo-name}`:
+
+| Secret | Source |
+|--------|--------|
+| `AZURE_CLIENT_ID` | Vended deploy identity client ID |
+| `AZURE_TENANT_ID` | Hub `tenant_id` output |
+| `AZURE_SUBSCRIPTION_ID` | Hub `subscription_id` output |
+| `AZURE_LOCATION` | Hub `AZURE_LOCATION` secret |
+| `TF_VAR_github_owner` | Hub `TF_VAR_github_owner` secret |
+
+```bash
+gh secret set AZURE_CLIENT_ID --body "<hub_identity_client_id>" --repo yauchinlam/azure-identity-hub
+# ... repeat for other hub secrets
 ```
 
 ### Step 5 — Push to main
