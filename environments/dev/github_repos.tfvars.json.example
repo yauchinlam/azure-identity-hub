@@ -4,6 +4,17 @@
       "create_resource_group": true,
       "branch": "main",
       "sync_github_secret": true
+    },
+    "portfolio-website": {
+      "create_resource_group": true,
+      "branch": "main",
+      "sync_github_secret": true,
+      "extra_role_assignments": [
+        {
+          "role_definition_name": "Reader",
+          "scope": "subscription"
+        }
+      ]
     }
   }
 }

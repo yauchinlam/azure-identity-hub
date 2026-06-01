@@ -45,13 +45,33 @@ locals {
     merge([
       for repo_name, cfg in var.github_repos : {
         for idx, scope_id in cfg.contributor_scopes :
-        "${repo_name}-extra-${idx}" => {
+        "${repo_name}-contributor-extra-${idx}" => {
           repo_name = repo_name
           scope_id  = scope_id
         }
       }
     ]...)
   )
+
+  # Resolve scope aliases: "subscription" -> current subscription ID; otherwise use as-is.
+  resolve_role_assignment_scope = {
+    for repo_name, cfg in var.github_repos :
+    repo_name => {
+      for idx, assignment in coalesce(cfg.extra_role_assignments, []) :
+      idx => assignment.scope == "subscription" ? data.azurerm_subscription.current.id : assignment.scope
+    }
+  }
+
+  repo_extra_role_assignments = merge([
+    for repo_name, cfg in var.github_repos : {
+      for idx, assignment in coalesce(cfg.extra_role_assignments, []) :
+      "${repo_name}-extra-${idx}" => {
+        repo_name            = repo_name
+        role_definition_name = assignment.role_definition_name
+        scope_id             = local.resolve_role_assignment_scope[repo_name][idx]
+      }
+    }
+  ]...)
 
   hub_user_access_admin_scope = coalesce(
     var.hub_role_assignment_scope,

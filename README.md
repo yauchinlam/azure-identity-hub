@@ -253,6 +253,7 @@ git checkout -b feature/portfolio-website
      - Resource group: `rg-portfolio-website-dev`
      - Deploy identity: `id-portfolio-website-dev-deploy`
      - Remote state key: `portfolio-website/dev.tfstate`
+   - Any **extra role assignments** beyond the default baseline (if applicable)
 
    CI runs **`Terraform (plan)`** on the PR.
 4. Merge the PR. CI on **`main`** applies the change and syncs secrets to the target repo.
@@ -273,13 +274,46 @@ If the resource group already exists (e.g. from a prior bootstrap):
 
 To bring an existing identity under hub management, use `terraform import`—otherwise leave that repo's identity outside the hub and only register **new** repos.
 
-### Extra Contributor scopes
+### Repo-level permissions
 
-Grant Contributor on additional scopes (existing resource IDs):
+Every vended repo gets a **default baseline** only:
 
-```hcl
-"my-repo" = {
-  contributor_scopes = [
+| Role | Scope |
+|------|--------|
+| Contributor | That repo's resource group (`rg-{repo}-dev`) |
+| Storage Blob Data Contributor | Shared `tfstate` container |
+
+No subscription-wide permissions unless a repo explicitly needs them.
+
+For exceptions, use **`extra_role_assignments`** in `github_repos.tfvars.json`. Grant only the repos that need broader or additional access. Use scope `"subscription"` as an alias for the current subscription ID, or pass a full Azure resource ID for a narrower scope.
+
+**portfolio-website (dev)** — Reader at subscription scope for Cloudflare custom domain validation in Azure:
+
+```json
+"portfolio-website": {
+  "create_resource_group": true,
+  "branch": "main",
+  "sync_github_secret": true,
+  "extra_role_assignments": [
+    {
+      "role_definition_name": "Reader",
+      "scope": "subscription"
+    }
+  ]
+}
+```
+
+Target repo: https://github.com/yauchinlam/portfolio-website
+
+Microsoft RBAC guidance: grant only the access workloads need and assign roles at the narrowest practical scope. Prefer resource group scope; use subscription scope only when the workload requires it (as with custom domain validation here).
+
+### Legacy: extra Contributor scopes
+
+`contributor_scopes` adds **Contributor** on additional resource IDs. Prefer `extra_role_assignments` for non-Contributor roles or clearer intent:
+
+```json
+"my-repo": {
+  "contributor_scopes": [
     "/subscriptions/.../resourceGroups/rg-other-dev"
   ]
 }
