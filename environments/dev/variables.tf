@@ -48,15 +48,20 @@ variable "github_repos" {
   description = <<-EOT
     GitHub repositories to vend deploy identities for. Map key is the repository name
     (must match the GitHub repo name for OIDC subject). Each entry gets a user-assigned
-    managed identity, federated credential, Contributor on its resource group(s), and
-    Storage Blob Data Contributor on the shared tfstate container.
+    managed identity, federated credential, Contributor on its resource group, and
+    Storage Blob Data Contributor on the shared tfstate container. Use extra_role_assignments
+    for repo-specific exceptions beyond the default baseline.
   EOT
   type = map(object({
     create_resource_group = optional(bool, true)
     resource_group_name   = optional(string)
     branch                = optional(string, "main")
     contributor_scopes    = optional(list(string), [])
-    sync_github_secret    = optional(bool, true)
+    extra_role_assignments = optional(list(object({
+      role_definition_name = string
+      scope                = string
+    })), [])
+    sync_github_secret = optional(bool, true)
   }))
   default = {}
 }

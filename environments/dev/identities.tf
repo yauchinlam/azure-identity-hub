@@ -60,3 +60,13 @@ resource "azurerm_role_assignment" "repo_tfstate_blob_contributor" {
   principal_type                   = "ServicePrincipal"
   skip_service_principal_aad_check = true
 }
+
+resource "azurerm_role_assignment" "repo_extra" {
+  for_each = local.repo_extra_role_assignments
+
+  scope                            = each.value.scope_id
+  role_definition_name             = each.value.role_definition_name
+  principal_id                     = azurerm_user_assigned_identity.repo[each.value.repo_name].principal_id
+  principal_type                   = "ServicePrincipal"
+  skip_service_principal_aad_check = true
+}
